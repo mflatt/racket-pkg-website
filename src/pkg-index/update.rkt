@@ -21,17 +21,18 @@
 (define non-force-wait-seconds (* 1 60 60))
 
 (define (update-checksums force? pkgs)
+  (define cache (make-hash))
   (filter (λ (pkg-name)
             (cond
               [(package-exists? pkg-name)
-               (update-checksum force? pkg-name)]
+               (update-checksum force? pkg-name cache)]
               [else (log! "update-checksums: invariant broken; ~a doesn't exist" pkg-name)
                     ;; considered not update
                     #f]))
           pkgs))
 
 ;; precondition: pkg-name must exist
-(define (update-checksum force? pkg-name)
+(define (update-checksum force? pkg-name cache)
   (log! "update-checksum ~v ~v" force? pkg-name)
   (with-handlers
       ([exn:fail?
@@ -88,7 +89,8 @@
       (define new-checksum
         (package-url->checksum
          (package-ref i 'source)
-         #:pkg-name pkg-name))
+         #:pkg-name pkg-name
+         #:cache cache))
       (unless (equal? new-checksum old-checksum)
         (log! "\told: ~v" old-checksum)
         (log! "\tnew: ~v" new-checksum)
@@ -113,7 +115,8 @@
                           (define new-checksum
                             (package-url->checksum
                              (hash-ref vi 'source "")
-                             #:pkg-name pkg-name))
+                             #:pkg-name pkg-name
+                             #:cache cache))
                           (unless (equal? new-checksum old-checksum)
                             (log! "\t~a old: ~v" vi old-checksum)
                             (log! "\t~a new: ~v" vi new-checksum)
